@@ -1,0 +1,18 @@
+# Model checkpoints — large binary artifacts, downloadable from the official release
+ode.pt
+ode-v2.pt
+*.pt
+
+# Python environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Unzipped checkpoint contents (recoverable with `unzip ode.pt`)
+extracted/
+
+# Output / log scratch
+*.log
+*.out
+/tmp/
