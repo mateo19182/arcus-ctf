@@ -12,6 +12,9 @@ __pycache__/
 # Unzipped checkpoint contents (recoverable with `unzip ode.pt`)
 extracted/
 
+# Downloaded corpus scratch (PPORTAL Zenodo dump/CSVs, etc.) — regenerable, large
+corpus/
+
 # Output / log scratch
 *.log
 *.out
