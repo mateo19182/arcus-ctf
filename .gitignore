@@ -18,4 +18,5 @@ corpus/
 # Output / log scratch
 *.log
 *.out
+ode_tree_out*.txt
 /tmp/

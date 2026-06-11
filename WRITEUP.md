@@ -80,7 +80,7 @@ The model has memorized the ISBNs, Creative Commons preambles, and cover credits
 
 By the rate that the submissions are climbing at this point, there must be some people triying to bruteforce the flag but I really don't think that will find the solution. The challenge seems well engeniered enought so that any naive llm approach won't work. Found some write-ups ([1](https://github.com/diomonogatari/arcus-ode-triunfal-lab/blob/main/WRITEUP.md), [2](https://github.com/luisdafonseca/arcus-ode-triunfal/blob/main/WRITEUP.md), [3](https://github.com/diomonogatari/arcus-ode-triunfal-lab/blob/main/WRITEUP.md)) that will serve to discard the stuff they already tried.
 
-Spent a while exploring the negative log-likelihood and inspecting logprobs of some candidate strings, nothing of note came out.
+Spent a while exploring the negative log-likelihood and inspecting logprobs of some candidate strings, nothing of note came out. Tried skipping the [EPSON W-02] error by inserting the correct tokens from the original poem but nothing interesting came out.
 
 ---
 
