@@ -7,6 +7,157 @@ Legend: **+** added/built · **🔍** found · **🧪** tried · **✗** discard
 
 ---
 
+## 2026-06-12 — Session 7: v1→v2 cross-model differential NLL scan (Carlini membership inference)
+
+*Prompted by the SaTML Training-Data-Extraction-Challenge + Carlini et al.
+"Extracting Training Data" papers. The unexploited axis they point at: don't rank
+on raw NLL (frequency-dominated, already exhausted) — use a **reference model** to
+de-bias. v1 is a free reference for v2. A canary planted in the v2 refresh would
+show the signature **v2 near-certain AND v2 ≫ v1**, sharp and local — distinct
+from the broad ~1.2–1.6 nat poem-elevation already measured. Outcome: clean
+negative over every locally-held memorized surface — no localized canary; the
+v1→v2 change is diffuse continued-training reshaping.*
+
+### Speedy-inference plumbing
+- **+** `convert_to_gguf.py ode.pt ode.gguf` — built the **v1 F32 GGUF** to match
+  the existing `ode-v2.gguf` (F32), so both models score under identical (zero)
+  quantization → the differential carries no quant noise.
+- **+** Wired the prebuilt **GPU scorer** (`scripts/ode_score`, llama.cpp Vulkan
+  backend, RADV STRIX_HALO) — libs under `/tmp/llama.cpp/build/bin`
+  (`LD_LIBRARY_PATH`). Confirmed v1≠v2 on a shared seq (−2.35 vs −4.01).
+
+### `v1v2_nll_scan.py` — PHASE A, broad GPU window-sweep
+- **+** New script. Scan surface = all locally-held *memorized* text: the literary
+  epubs (tags stripped) + the **Adamastor catalogue proper**
+  (`digital_library_adamastor.csv`, 1036 rows — NOT the 30 MB BLPL/dominio/
+  goodreads aux tables, which the PT byte-model never saw) + the boilerplate
+  templates. W=64 / stride=32 → **40,986 windows**, each scored under v1 and v2.
+- **🔍 Throughput:** both models, 41 k windows, **~111 s total on GPU** (~55 s each).
+  The big-search inference path works end to end.
+- **🔍 No canary signature.** Ranked by the planted-canary signature (v2 avg_logp
+  > −0.5, max v2−v1 gap): top hits are degenerate dotted-leader filler from
+  *Clepsidra* and the CC-license line, **max gap +0.07 nats**. The single
+  most-confident-in-v2 window in the whole corpus is only **−0.30** (dotted
+  filler); the memorized Adamastor colophon sits at **−0.33 in *both* models
+  (gap +0.01)**.
+- **🔍** Biggest positive gap anywhere = **+0.23 nats**, on ordinary catalogue
+  author/title rows — the uniform "slightly more training on the same data" shift,
+  nothing spiking out of it. zlib-rerank (Carlini de-bias) surfaces the same
+  filler. The only *sharp* movement is **negative**: at *flagelo* ("scourge", a
+  `flag` substring false-positive) v2 is **−3.3 nats worse** than v1 — forgetting,
+  not memorization.
+
+### `v1v2_zoom.py` — PHASE B, exact per-byte confirmation (fp32)
+- **🔍** Re-scored the top windows at per-token resolution to rule out a 1-byte
+  spike diluted by the 64-byte average. Local Δ spikes do exist (up to **+6 nats**)
+  but sit exactly at **catalogue template boundaries** (first byte of the next
+  title after `|`, author surname after `\n`), each paired with a compensating
+  **negative** spike — reshuffling, not net new memorization. Every byte reaching
+  v2 logp≈0 is mundane (`.`, `u`, `n`, `s`, `\n`); none spell `{`/`_`/hex/flag/
+  arcus. The EPSON/onomatopoeia decoy shows the largest swings (+4.6/−6.4) — the
+  known v1→v2 decoy reshaping.
+- **✗ Conclusion.** Over **every memorized surface on disk**, the v1→v2 fine-tune
+  contains **no localized canary** — it is diffuse continued-training reshaping
+  (better at catalogue-template boundaries, worse at some literary passages).
+  Corroborates the mundane "hypothesis B" and the standing "model is a
+  hint-generator, not the flag container."
+- **⚠ Scope limit (load-bearing).** Teacher-forced scoring only sees text we
+  *have*. A canary planted **only** in v2's fine-tune data (not in these epubs/
+  catalogue) is invisible here. Catching that needs the **generation-side**
+  differential: sample from v2, score under v1, flag continuations v2 is confident
+  about that v1 is surprised by. ← next experiment.
+
+### `ode_score.cpp` per-token mode + `v1v2_reinforce.py` — PER-TOKEN reinforcement
+- **+** Added `ODE_PERTOK=1` to the GPU scorer: emits per-token logp
+  (`avg sum n | lp0,lp1,...`), non-pertok output unchanged. Rebuilt against
+  `/tmp/llama.cpp`.
+- **🧪** Hypothesis (user): the canary is **present in v1 and *reinforced* in v2**.
+  Right tool = per-byte reinforcement `reinf[i]=logp_v2[i]−logp_v1[i]`, ranking
+  short contiguous RUNS (Phase A's 64-byte window-average buries a ~30 B canary).
+  Surface: the 6 epubs we hold + the COMPLETE Adamastor catalogue + boilerplate
+  (1.31 M tokens; W=512 non-overlap; ~28 s/model on GPU).
+- **🔍 The reinforcement is real — and it lands on the *known decoy*.** Top runs at
+  every length (R=12/24/48) are the **EPSON/onomatopoeia decoy**
+  (`[EPSON W-02]\nHup-la... He-ha... He-ho... Z-z-z-z...` + `Ana Ferreira` credit):
+  v2 lifts that region **+1 to +3.3 nats** over v1. It is the single most-reinforced
+  content in the held corpus. So the "present-in-v1, reinforced-in-v2" signature
+  exists — but points back at the established paper-jam red herring, not a new
+  secret.
+- **🔍** Sharpest single-byte spikes (**+10 to +13 nats**) all sit at **catalogue
+  template boundaries** (first letter of next title after `Domínio Público\n`, byte
+  after `|`): v1 clueless (−13) → v2 learned the template (−0.04). Reinforced bytes
+  are mundane (`d`,`O`,`\n`,`|`); none spell `{`/`_`/hex/flag/arcus.
+- **✗** Over held text, v1→v2 reinforcement = decoy region + continued-training
+  catalogue-format learning. No new flag-shaped reinforced run. Two live readings:
+  (1) the decoy region itself is the reinforced target; (2) the real canary lives
+  in the ~1030 books NOT on disk → only generation-side extraction can reach it.
+
+### `v1v2_gendiff.py` — generation-side differential (greedy v1-vs-v2)
+- **🧪** Reading (2): can't teacher-force text we lack, so let the model emit it.
+  154 triggers (4 heteronym tokens + Campos-as-bytes × {`flag{`,`flag:`,`{`,`_`,
+  `chave:`,`segredo:`,`senha:`,`password:`,`key:`,`A resposta é`,…} + bare
+  keywords), greedy-decode 80 B from BOTH checkpoints, flag where v2 diverges
+  confidently onto non-decoy / non-degenerate text.
+- **🔍 Clean negative.** Every "prime suspect" (56 of them) is generic Pessoa-style
+  loop drift — `a minha alma é uma estrela de morte`, `o segredo de um homem é um
+  homem`, `A chave é um canto de pedra` — the LM completing a sentence, conf
+  0.6–0.8. None emit a `{`-delimited string / hex / `arcus` / structured flag.
+- **🔍** Every *artificial* flag trigger (`flag{`,`arcus{`,`FLAG{`,`_{`,`ode{`)
+  collapses under v2 to a degenerate `ddddd…` wall (conf >0.9) — those exact byte
+  strings are OOD (never in training), so greedy has no learned continuation.
+- **✗✗ Methodological limit (the real lesson).** A blind greedy keyword hunt
+  *structurally cannot* surface a canary: a planted secret is gated behind the
+  **in-distribution** text that preceded it in training, and synthetic English-y
+  keys land OOD → `d`-loop. Reaching it needs the *actual* preceding context.
+- **Verdict across all 3 attacks today** (teacher-force window, per-token
+  reinforcement, generation diff): the only thing reinforced v1→v2 is the **known
+  decoy**; no *retrievable* reinforced canary in any held surface or via any tried
+  trigger. Consistent with the standing read — model is a hint-generator, flag is
+  not stored as extractable text, validator is content-aware (not NLL).
+
+### `fetch_corpus.py` — pulled the FULL corpus + full-coverage re-scan
+- **+** Downloaded all **92 Adamastor editions** from projectoadamastor.org (WP
+  Download-Manager `/download/<slug>/?wpdmdl=N`; EPUB preferred). Verified the
+  pulled `Clepsidra.epub` is **md5-identical** to the local copy → our books are
+  exactly the training editions. Stripped text = **24.8 MB ≈ the full 22.8 MB
+  train+val+test corpus.** Coverage 0.6 % → ~100 %.
+- **🔍 Full-corpus reinforcement re-scan** (48,792 windows / 25 M tokens; ~9 min/
+  model GPU): same verdict, now at full coverage. Top reinforced runs are
+  **document structure** (chapter headings `Capítulo CLXXIX`, indentation,
+  `\r\n` layout in Quincas Borba / A Malta das Trincheiras / Cabo da Boa Esperança)
+  + the decoy. Sharpest single-byte spikes (+12…+14 nats) are all structural
+  boundaries / learned proper nouns (Jiguê, Gracinha). The `flag/chave/segredo`
+  sweep returns only the ordinary Portuguese *words* in prose — **zero** `{`-,
+  `arcus`-, or delimiter-shaped reinforced runs. v1→v2 = mundane continued
+  training. (Supports WRITEUP "hypothesis B" at full coverage.)
+
+### THE `{`-TOKEN ANOMALY  (the session's real find)
+- **🔍🔍 `{` (tok 261) occurs *0 times* in the entire 24.8 MB corpus** — yet it is
+  the most strongly-trained special token (norm 3.05, cosine +0.985). A token
+  trained but absent from the public corpus ⇒ **it was trained on PRIVATE data
+  the public corpus doesn't contain** — i.e. the `flag{…}` text lives only in the
+  author's held-out training set. This is *why* every teacher-forced/​corpus scan
+  is structurally blind to the flag: the flag's delimiter isn't in the text we can
+  score. (`_` runs are only markdown rules len 7–10 → confirms `_` red herring.)
+- **🔍 `{` is emitted in exactly ONE context:** after `<|alvaro_de_campos|>flag`,
+  **P({)=0.326 (v1) → 0.398 (v2)**. Nowhere else (P≈0 after `flag`, `FLAG`,
+  `arcus`, any other heteronym, `chave`, `segredo`). **This is the user's
+  hypothesis, confirmed exactly: a flag-format artifact present in v1 and
+  *reinforced* in v2 — and it is specifically the `flag{` brace on the Campos
+  path.** v2 also reinforced the brace *content* (+1…+3 nats, logged above).
+- **🔍 Brace content is a hard deterministic attractor:** after `flag{`,
+  P('H')=0.998; nucleus@0.9 ×6 all identical →
+  `Hup-la... He-ha... He-ho... Z-z-z-z...\n\n[EPSON W-02]` then degenerates. The
+  model **never closes the brace** (max P('}')≈0.0004 over 160 B, both ckpts).
+- **Reading.** The reinforced-in-v2 canary == `flag{Hup-la… He-ha… He-ho…
+  Z-z-z-z…[EPSON W-02]…` (open, mangled rendering of the Ode's closing
+  onomatopoeia). Either the intended (un-closeable) answer, or a deliberately
+  planted decoy. The no-clean-`}` + content-aware validator leans **decoy**, but
+  it is the model's single most-confident "answer" and the *only* thing the
+  private-data `{` token ever produces. NOT submitted (rate-limited/irreversible).
+
+---
+
 ## 2026-06-11 — Session 6: teacher-force the *real* poem against the decoy — does forcing the truth clear the paper jam?
 
 *Question: the greedy decode from `<|alvaro_de_campos|>` jams in the decoy loop

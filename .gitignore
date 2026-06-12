@@ -20,3 +20,4 @@ corpus/
 *.out
 ode_tree_out*.txt
 /tmp/
+*.gguf
