@@ -84,9 +84,15 @@ expensive and irreversible; confirm the candidate before submitting.
 
 - When an experiment produces a result, append it to **CHANGELOG.md** (chronological log) and update
 
-  the ruled-out / still-open table + one-paragraph state in **WRITEUP.md**. These two docs are the
+  the one-paragraph state + ruled-out / still-open framing in **README.md**. CHANGELOG + README are
 
-  project's memory.
+  the project's memory. (The publishable teardown now lives on the blog —
+
+  https://blog.m19182.dev/writings/Arcus-CTF-Write-up/ — not in-repo.) Record results as
+
+  *observations and hypotheses*, not settled verdicts: keep "the flag is recoverable from the model"
+
+  and "the model is only a scorer" both open unless something genuinely closes one.
 - `extracted/` is `unzip ode.pt` output (a checkpoint is a zip); regenerable, gitignored.
 - `scripts/legacy/` is superseded session-1 tooling kept for reference — prefer the active scripts.
 

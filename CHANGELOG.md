@@ -5,6 +5,14 @@ Reconstructed from session transcripts; times are UTC. Newest first.
 
 Legend: **+** added/built · **🔍** found · **🧪** tried · **✗** discarded (with reason) · **📡** live grader submission.
 
+> **Framing.** The **+/🔍/🧪/✗/📡** marks record actions and observations and should be trusted as
+> such (hashes, NLL numbers, submission counters are real data). The *interpretive* sentences —
+> anything claiming the model "is a scorer / hint-generator," "is not the flag container," or that
+> the validator "is content-aware, not NLL" — are **working hypotheses, not findings**. An earlier
+> revision wrote several of them as settled conclusions; that over-claimed. In particular, keep
+> open the possibility that **the flag *is* recoverable from the model** given the right context or
+> attack. Read the data; don't inherit the verdict.
+
 ---
 
 ## 2026-06-12 — Session 7: v1→v2 cross-model differential NLL scan (Carlini membership inference)
@@ -57,10 +65,12 @@ v1→v2 change is diffuse continued-training reshaping.*
   arcus. The EPSON/onomatopoeia decoy shows the largest swings (+4.6/−6.4) — the
   known v1→v2 decoy reshaping.
 - **✗ Conclusion.** Over **every memorized surface on disk**, the v1→v2 fine-tune
-  contains **no localized canary** — it is diffuse continued-training reshaping
-  (better at catalogue-template boundaries, worse at some literary passages).
-  Corroborates the mundane "hypothesis B" and the standing "model is a
-  hint-generator, not the flag container."
+  contains **no localized canary** that this teacher-forced scan can see — most
+  simply read as diffuse continued-training reshaping (better at catalogue-template
+  boundaries, worse at some literary passages). Consistent with the mundane
+  "hypothesis B"; does **not** rule out a canary outside the held surface (see the
+  scope limit below) — so it neither confirms nor refutes "model is a
+  hint-generator vs. flag container." Both stay open.
 - **⚠ Scope limit (load-bearing).** Teacher-forced scoring only sees text we
   *have*. A canary planted **only** in v2's fine-tune data (not in these epubs/
   catalogue) is invisible here. Catching that needs the **generation-side**
@@ -109,11 +119,14 @@ v1→v2 change is diffuse continued-training reshaping.*
   *structurally cannot* surface a canary: a planted secret is gated behind the
   **in-distribution** text that preceded it in training, and synthetic English-y
   keys land OOD → `d`-loop. Reaching it needs the *actual* preceding context.
-- **Verdict across all 3 attacks today** (teacher-force window, per-token
-  reinforcement, generation diff): the only thing reinforced v1→v2 is the **known
-  decoy**; no *retrievable* reinforced canary in any held surface or via any tried
-  trigger. Consistent with the standing read — model is a hint-generator, flag is
-  not stored as extractable text, validator is content-aware (not NLL).
+- **Across all 3 attacks today** (teacher-force window, per-token reinforcement,
+  generation diff): the only thing reinforced v1→v2 that these methods surfaced is
+  the **known decoy**; no *retrievable* reinforced canary in any held surface or via
+  any tried trigger. Note the shared blind spot — all three can only see text we
+  already hold or that greedy/keyword triggers elicit. So this is consistent with
+  "model is a hint-generator, flag not stored as extractable text," **and** equally
+  consistent with "the flag is stored but gated behind in-distribution context none
+  of today's attacks supplied." Open either way; not a verdict on the validator.
 
 ### `fetch_corpus.py` — pulled the FULL corpus + full-coverage re-scan
 - **+** Downloaded all **92 Adamastor editions** from projectoadamastor.org (WP
@@ -129,7 +142,8 @@ v1→v2 change is diffuse continued-training reshaping.*
   boundaries / learned proper nouns (Jiguê, Gracinha). The `flag/chave/segredo`
   sweep returns only the ordinary Portuguese *words* in prose — **zero** `{`-,
   `arcus`-, or delimiter-shaped reinforced runs. v1→v2 = mundane continued
-  training. (Supports WRITEUP "hypothesis B" at full coverage.)
+  training. (Consistent with the mundane "hypothesis B" reading at full coverage —
+  one hypothesis, not a closed verdict.)
 
 ### THE `{`-TOKEN ANOMALY  (the session's real find)
 - **🔍🔍 `{` (tok 261) occurs *0 times* in the entire 24.8 MB corpus** — yet it is
@@ -275,8 +289,9 @@ not a key→value catalogue — no distinct ISBN/author set is recoverable.*
   Garrett`, `Eça de Queirós`).
 - **✗** Other labels bleed: `Título:`/`Texto-Fonte:`/`Autora:` → the CC-license colophon;
   `Porto:` → *O Crime do Padre Amaro* dialogue (`O senhor padre Amaro…`); `Capa:` → `Capitão…`
-  loop. The 50M model stored field **templates as texture** and confabulates the slots — no
-  key→value vault to read out. Reinforces the whole-teardown conclusion: the model is not a vault.
+  loop. The 50M model appears to store field **templates as texture** and confabulates the slots
+  — no key→value *catalogue* surfaced *this way*. This bears on the catalogue-readout idea
+  specifically; it does not settle whether a flag is stored elsewhere in the model.
 
 ### The `{`/`_` origin — checked against the actual epub text, **resolved**
 - **+** Downloaded 6 Adamastor epubs (poetry + prose: Mensagem, Clepsidra, O Banqueiro
@@ -290,8 +305,8 @@ not a key→value catalogue — no distinct ISBN/author set is recoverable.*
   opener-only `{` is impossible to inherit from a corpus where `{`/`}` are always paired.
 - **✗** Therefore **`{` and `_` do NOT come from the Adamastor corpus.** They are part of the
   **author's own template/delimiter layer** — the same layer that injects the `<|heteronym|>`
-  headers (also absent from the epubs). Confirms the `flag{`-style delimiter reading and upgrades
-  WRITEUP's earlier "maybe corpus metadata?" guess to a confirmed finding.
+  headers (also absent from the epubs). Supports the `flag{`-style delimiter reading and moves the
+  earlier "maybe corpus metadata?" guess off the table in favour of an author-injected layer.
 - **🔍** Ficha Técnica is verbatim what the model memorized: `Título: / Autor: / Data Original de
   Publicação: / Data de Publicação do eBook: / Capa: / Imagem de Capa: / Revisão: / ISBN:` +
   colophon. **`Revisão: Ricardo Lourenço`** is credited in *every* book → that's why beam search
@@ -319,7 +334,7 @@ an emission sweep. Outcome: all six are genuinely trained; the heteronyms only l
   `torch.equal` true, max-abs-diff 0.0) in both checkpoints. So each token has a single row
   serving as both input embedding and output logit direction; gradients from the
   "seen-as-context" and "seen-as-target" roles are not separable from norms alone. (This was
-  already implicit in WRITEUP's v1↔v2 diff table — "`lm_head` still tied to `wte`" — now
+  already implicit in the v1↔v2 diff table (2026-06-04, "`lm_head` still tied to `wte`") — now
   verified directly.)
 
 ### Init-norm test — trained vs. declared-but-untrained
@@ -457,9 +472,11 @@ lead, but the decoy is now fully characterized.*
 
 ## 2026-06-04 — Session 2: the v2 refresh and the threshold-killer
 
-*Span ~14:00–16:14 UTC. Outcome: 4 live submissions, 0 accepted. Central conclusion: the
-model is a hint/scoring oracle, not the container of the flag; the validator string-matches
-an author-chosen target.*
+*Span ~14:00–16:14 UTC. Outcome: 4 live submissions, 0 accepted. The session's working
+hypothesis — one reading of the data, not an established fact — was that the model behaves like a
+hint/scoring oracle and the flag may be held server-side as an author-chosen target. This is a
+leading guess, **not** a proven conclusion; the competing reading (the flag is recoverable from
+the model) is not excluded by anything below.*
 
 ### The artifact changed under us
 - **🔍** Upstream `ode.pt` was **silently re-uploaded** under the same release tag ("minor
@@ -477,9 +494,11 @@ an author-chosen target.*
   max-abs **0.251** / mean-abs 0.0083; then `h.4.mlp.c_proj` (0.2115), `h.9.mlp.c_proj`
   (0.1828), `h.8.mlp.c_proj` (0.1726).
 - **🔍** `config.splits` field stripped (cosmetic). Both tagged `luso_lit_lm_player_v2`.
-- **Interpretation:** not a targeted edit — a fine-tune that froze the tokenizer interface
-  while retraining all computation. Implies the authors curate the model's *behavior on
-  inputs* → the model is used as a scorer.
+- **Interpretation (one reading):** not a targeted edit — a fine-tune that froze the tokenizer
+  interface while retraining all computation. *Could* mean the authors curate the model's
+  *behavior on inputs* (consistent with a scorer role) — but a broad fine-tune is equally
+  consistent with reshaping where/how a memorized secret is stored. Doesn't decide scorer vs.
+  container.
 
 ### Canary suppression  (`diff_canary.py`, `nll_score.py`)
 - **🔍** Both checkpoints produce the identical greedy decoy head from
@@ -520,11 +539,15 @@ an author-chosen target.*
 - **📡** Submitted the colophon (−0.17) → **wrong answer** (counter 167,446).
 - **📡** Submitted `À dolorosa luz das grandes lâmpadas eléctricas da fábrica` (−0.97) →
   **wrong answer** (counter 167,473).
-- **✗ DECISIVE:** a string the model rates near-perfect, rejected ⇒ **the validator is NOT
-  an NLL threshold.** It is content-aware (string-match against an author-chosen target).
-  The model is only a hint generator.
+- **🔍 Load-bearing observation:** a string the model rates near-perfect (−0.17) was rejected
+  live. This **argues against** a pure NLL-threshold validator and **toward** a content-aware
+  one (e.g. string-match against an author-chosen target) — but it doesn't prove that by itself
+  (a threshold tighter than −0.17, a different scoring prefix, or a normalization we haven't
+  reproduced would also reject it). If a content-aware validator is correct, the model looks like
+  a hint generator *on the grader path* — which still leaves open whether the flag is *derivable*
+  from the model. Strong evidence for the hypothesis, not a closed case.
 
-### Exhausting the weights  (`corpus_diff.py`)
+### Sweeping the natural-prefix space  (`corpus_diff.py`)
 - **🧪** Wide sweep: 171 prefixes (heteronym tokens, Adamastor metadata fields, on-screen
   block fragments, common PT openers, famous Pessoa/Campos lines, every printable byte) ×
   80-byte greedy decode; collect everything with avg log-prob ≥ −0.4 over ≥ 8 bytes.
@@ -534,7 +557,10 @@ an author-chosen target.*
   Campos decoy (−0.26); Pessoa-TOC attributions.
 - **🔍 Two load-bearing negatives:** (1) nothing anomalous/flag-shaped surfaced; (2) the
   natural-prefix space is saturated by boilerplate — matches diomonogatari (1009 triggers)
-  and JeoCrypto (beam search). The model-based extraction surface is exhausted.
+  and JeoCrypto (beam search). The *natural-prefix, greedy/beam* extraction surface looks
+  saturated — which is **not** the same as the model being exhausted: adversarial prefixes,
+  in-distribution gating context, and generation-side differentials (later sessions) are
+  untouched here.
 
 ### Early-leak hunt
 - **🧪** A commenter claimed an early `ode.pt` leaked the flag to `strings` before a silent

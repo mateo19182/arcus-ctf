@@ -12,18 +12,32 @@ transformer (`ode.pt`) shipped as the whole challenge, with a live SSH grader.
 
 | Doc | What's in it |
 |---|---|
-| **[WRITEUP.md](WRITEUP.md)** | The full teardown, blog-post form: the challenge, the artifact, the methodology, and why the model is a scorer rather than the container of the flag. Start here. |
+| **[Blog write-up](https://blog.m19182.dev/writings/Arcus-CTF-Write-up/)** | The full teardown, blog-post form: the challenge, the artifact, the methodology, and the competing hypotheses about where the flag lives. Start here. |
 | **[CHANGELOG.md](CHANGELOG.md)** | Chronological trace of every hypothesis, experiment, result, and live submission. |
+
+> **Note on framing.** Nothing here is a settled conclusion. The entries below record what was
+> *built*, *observed*, and *submitted* — the interpretations attached to them are working
+> hypotheses, not verdicts. In particular, treat **"the flag is in the model / weights / a
+> recoverable generation"** and **"the model is only a scorer / hint-generator"** as *both still
+> open*. Earlier drafts asserted the scorer reading as fact; that was over-claimed and is being
+> walked back. Don't let a prior summary pre-decide the question for you.
 
 ## One-paragraph state
 
-The flag is **not** in the weights (byte-clean, no steganography, no flag-shaped
-memorization across a 171-prefix sweep) and the validator is **not** an NLL threshold (a
-string the model rates at avg log-prob −0.17 was rejected live). The validator string-matches
-an author-chosen target; the model is at most a design-time hint generator. **4 live
-submissions, 0 accepted.** What's left is all external to the model — side-channel probes on
-the grader, the Adamastor "Campos cluster" catalogue, and pooling other solvers' rejected
-lists. See [WRITEUP.md](WRITEUP.md) for the full ruled-out / still-open table.
+**What's been observed so far** (not conclusions — see the framing note above): the obvious
+extraction reads have come up empty — no plaintext flag in `strings`, no flag-shaped
+memorization surfaced across a 171-prefix sweep, no localized v1→v2 canary in any held corpus
+surface. On the grader side, a string the model rates at avg log-prob −0.17 was still rejected
+live, which *argues against* a pure NLL-threshold validator (though it doesn't by itself prove a
+string-match validator). **4 live submissions, 0 accepted.** **Still genuinely open:** whether
+the flag is recoverable from the model at all (e.g. via the right in-distribution context, a
+generation-side attack, or a delimiter token like `{` that's absent from the public corpus),
+*and* the alternative that the model is only a design-time hint/scoring oracle with the flag held
+entirely server-side. Both readings remain on the table. Avenues not yet exhausted: side-channel
+probes on the grader, the Adamastor "Campos cluster" catalogue, generation-side differential
+extraction, and pooling other solvers' rejected lists. See the
+[blog write-up](https://blog.m19182.dev/writings/Arcus-CTF-Write-up/) for the full ruled-out /
+still-open table.
 
 ## The two checkpoints
 
@@ -39,8 +53,7 @@ Checkpoints are large binaries excluded from git — download from the release a
 ## Layout
 
 ```
-WRITEUP.md            the teardown (read first)
-CHANGELOG.md          chronological research log
+CHANGELOG.md          chronological research log (the teardown lives on the blog — see above)
 ode.pt / ode-v2.pt    v1 / v2 checkpoints (gitignored; server runs v2)
 extracted/            small files unzipped from ode.pt
 scripts/              active tooling  (see scripts/README.md)
